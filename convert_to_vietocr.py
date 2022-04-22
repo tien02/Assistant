@@ -2,6 +2,7 @@
 import os
 import cv2 as cv
 from tqdm import tqdm
+import pandas as pd
 
 # Trich xuat ROI
 def extract_roi(img, offsets):
