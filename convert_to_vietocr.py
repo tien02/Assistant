@@ -35,6 +35,17 @@ annot_name: ten annotation
 folder img: chua anh crop tu dataset
 train_annotation.txt: chua du lieu theo format VietOCR
 '''
+# Chuyen du lieu tu format cua Vin Text sang format cua VietOCR
+### Parameter
+# base_dir: vi tri luu vao
+# label_dir: vi tri Label
+# start_index_img: ten anh dat theo so duoc bat dau tu
+# name: ten folder
+# annot_name: ten annotation
+### Return 
+# folder img: chua anh crop tu dataset
+# train_annotation.txt: chua du lieu theo format VietOCR
+
 def generate_data_to_vietocr(base_dir,
                              img_dir,
                              label_dir, 
@@ -57,52 +68,55 @@ def generate_data_to_vietocr(base_dir,
 
   # Start image name
   image_name = start_index_img
-
-  # Write annotation to file 
   with open(os.path.join(PATH, annot_name + ".txt"), "a") as f:
     for file in tqdm(os.listdir(img_dir)):
       # read Image
       img = cv.imread(os.path.join(img_dir, file))
       img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
-      # path to annot file
+      # path to annot file for VinText
       annot_file = file[2:]
       annot_file = "gt_" + str(int(annot_file.split(".")[0])) + ".txt"
 
+      #path to annot file for BKAI
+      # annot_file = "gt_" + str(file.split(".")[0]) + ".txt"  
+
       # read annot file
-      with open(os.path.join(label_dir, annot_file),"r") as ff: 
-        for line in ff.readlines():
-          offsets = line.split(",")
-          label = offsets.pop()
+      df = pd.read_csv(os.path.join(LABEL, annot_file),
+                names=["x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4", "label"],
+                quoting=3, encoding='utf-8')
+      
+      # itterate through dataframe
+      for _, row in df.iterrows():
+        offsets = [row[0],row[1],row[2],row[3],row[4],row[5],row[6],row[7]]
+        label = str(row[8])
 
-          # get ROI
-          roi = extract_roi(img, offsets)
-          
-          # remove invalid label
-          if roi.size == 0:
-            continue
-          elif "#" in label:
-            continue
-          elif label == " ":
-            continue
-          elif label == "":
-            continue
-          else:
-            if "\n" not in label:
-              label = label + "\n"
+        # get ROI
+        roi = extract_roi(img, offsets)
+        
+        if roi.size == 0:
+          continue
+        elif "#" in label:
+          continue
+        elif label == " ":
+          continue
+        elif label == "":
+          continue
+        else:
+          if "\n" not in label:
+            label = label + "\n"
 
-            # Save ROI  	
-            cv.imwrite(os.path.join(SAVE_IMG_PATH, str(image_name) + ".jpg"), roi)
+          cv.imwrite(os.path.join(SAVE_IMG_PATH, str(image_name) + ".jpg"), roi)
 
-            # write annotation
-            annot = "img/" + str(image_name) + ".jpg" + "\t" + label
-            f.write(annot)
+          # write annotation
+          annot = "img/" + str(image_name) + ".jpg" + "\t" + label
+          f.write(annot)
 
-            # Annoucement
-            #print("Image: {} === Label: {} === Save in {}".format(file, label, str(image_name) + ".jpg"))
+          # Annoucement
+          #print("Image: " + file + " Annot:" + annot_file + "img/" + str(image_name) + ".jpg" + "\t" + label))
 
-            # Increase image_name
-            image_name += 1       
+          # Increase image_name
+          image_name += 1      
 
 # Usage
 
